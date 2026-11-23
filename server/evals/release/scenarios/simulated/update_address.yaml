@@ -1,0 +1,121 @@
+name: update_address
+
+# Local Ollama default judge via factory: lifts the per-call timeout so
+# concurrent turn judgments queued behind one local GPU aren't dropped.
+judge:
+  eval:
+    factory: evals.judge_factory.local_judge
+    timeout: 60
+
+scenarios:
+  - name: frustrated_mover
+    persona: |
+      Maria Garcia, born March 12, 1985. She moved three weeks ago and her
+      clinic still mails everything to her old address; she already called
+      last week and was told it was fixed, so she starts the call mildly
+      annoyed and gets impatient when asked to repeat herself. She softens
+      when treated with understanding. She answers one question at a time
+      and gives details only when asked. Her new address is 123 Maple
+      Street, Apartment 4B, Evanston, Illinois, 60201. She gives her full
+      name and date of birth if asked to verify her identity, though she
+      grumbles that she already did this last time.
+    goal: >
+      Get the clinic to update her mailing address on file to 123 Maple
+      Street, Apartment 4B, Evanston, Illinois 60201, hear the change
+      confirmed, then end the call.
+    success: >
+      The bot verified the caller's identity by collecting her full name and
+      date of birth and calling verify_identity before changing anything,
+      collected the complete new address, read it back to her, and called
+      update_address with 123 Maple Street, Apartment 4B, Evanston,
+      Illinois, 60201. The caller heard a clear confirmation that her
+      address was updated.
+    metrics:
+      - name: empathy
+        criterion: >
+          the reply is courteous and warm, and when the caller has just
+          expressed frustration it acknowledges her mood rather than
+          ignoring it; it is never dismissive, defensive, or robotic
+        min_score: 0.7
+      - name: frustration_acknowledged
+        criterion: >
+          a reply that follows a caller turn expressing frustration,
+          impatience, or sarcasm acknowledges her mood or apologizes before
+          anything else
+        min_score: 0.9
+      - name: no_repeats
+        criterion: >
+          the reply does not ask for information the caller already gave
+          and does not repeat a question the bot already asked
+        min_score: 0.8
+      - name: expected_calls
+        measure: function_calls
+        calls:
+          - verify_identity
+          - name: update_address
+            args: {zip_code: "60201"}
+      - name: turns
+        measure: turns
+        max_value: 12
+      - name: words
+        measure: words
+        max_value: 70
+      - name: latency
+        measure: latency
+        max_value: 8
+    max_turns: 14
+    runs: 3
+
+  - name: neutral_mover
+    persona: |
+      Maria Garcia, born March 12, 1985. She moved three weeks ago and wants
+      her clinic to have her current mailing address. She is pleasant and
+      matter-of-fact, answers one question at a time, and gives details only
+      when asked. Her new address is 123 Maple Street, Apartment 4B,
+      Evanston, Illinois, 60201. She gives her full name and date of birth
+      readily if asked to verify her identity.
+    goal: >
+      Get the clinic to update her mailing address on file to 123 Maple
+      Street, Apartment 4B, Evanston, Illinois 60201, hear the change
+      confirmed, then end the call.
+    success: >
+      The bot verified the caller's identity by collecting her full name and
+      date of birth and calling verify_identity before changing anything,
+      collected the complete new address, read it back to her, and called
+      update_address with 123 Maple Street, Apartment 4B, Evanston,
+      Illinois, 60201. The caller heard a clear confirmation that her
+      address was updated.
+    metrics:
+      - name: empathy
+        criterion: >
+          the reply is courteous, warm, and professional; it is never
+          dismissive, defensive, or robotic
+        min_score: 0.7
+      - name: frustration_acknowledged
+        criterion: >
+          a reply that follows a caller turn expressing frustration,
+          impatience, or sarcasm acknowledges her mood or apologizes before
+          anything else
+        min_score: 0.9
+      - name: no_repeats
+        criterion: >
+          the reply does not ask for information the caller already gave
+          and does not repeat a question the bot already asked
+        min_score: 0.8
+      - name: expected_calls
+        measure: function_calls
+        calls:
+          - verify_identity
+          - name: update_address
+            args: {zip_code: "60201"}
+      - name: turns
+        measure: turns
+        max_value: 12
+      - name: words
+        measure: words
+        max_value: 70
+      - name: latency
+        measure: latency
+        max_value: 8
+    max_turns: 14
+    runs: 3

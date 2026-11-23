@@ -39,6 +39,20 @@ A Pipecat AI voice agent built with a cascade pipeline (STT → LLM → TTS).
    - SmallWebRTC: `uv run bot.py`
    - Daily: `uv run bot.py --transport daily`
 
+## Evals
+
+Simulated-conversation evals live in `server/evals/release/scenarios/simulated/`.
+The persona and judge run on the local Ollama default model.
+
+1. Pull the judge model once: `ollama pull gemma4:12b` (and have `ollama serve` running).
+2. Start the bot (terminal 1): `cd server && uv run bot.py`
+3. Run the eval (terminal 2):
+
+   ```bash
+   cd server
+   uv run python -m pipecat.evals run evals/release/scenarios/simulated/update_address.yaml
+   ```
+
 ## Project Structure
 
 ```
