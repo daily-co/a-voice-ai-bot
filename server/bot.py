@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.evals.transport import EvalTransportParams
+from pipecat.expressive.policy import ExpressionGuidance, ExpressionPolicy
+from pipecat.expressive.processors.tone_reader import PipecatToneReader
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -130,6 +132,8 @@ async def run_bot(transport: BaseTransport):
         [
             transport.input(),
             stt,
+            # Reads each user turn's emotion and sarcasm (RCS Perception).
+            PipecatToneReader(),
             user_aggregator,
             llm,
             tts,
@@ -143,6 +147,16 @@ async def run_bot(transport: BaseTransport):
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
+            # RCS Expression: LLM writes delivery/sound tags the TTS performs.
+            enable_expressive_conversation=True,
+            expression_policy=ExpressionPolicy(
+                guidance=[
+                    ExpressionGuidance.MATCH_STYLE,
+                    ExpressionGuidance.SLOW_FOR_DETAILS,
+                    "If the reading shows frustration or sarcasm above 0.5, "
+                    "acknowledge the user's mood and respond with extra care.",
+                ],
+            ),
         ),
         observers=[],
     )
