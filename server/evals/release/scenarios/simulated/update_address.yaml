@@ -50,9 +50,10 @@ scenarios:
         min_score: 0.7
       - name: frustration_acknowledged
         criterion: >
-          a reply that follows a caller turn expressing frustration,
-          impatience, or sarcasm acknowledges her mood or apologizes before
-          anything else
+          a reply whose immediately preceding caller turn expresses
+          frustration, impatience, or sarcasm acknowledges her mood or
+          apologizes before anything else; judge only against that
+          immediately preceding turn, not earlier turns in the call
         # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
         min_score: 0.8
       - name: no_repeats
@@ -107,9 +108,10 @@ scenarios:
         min_score: 0.7
       - name: frustration_acknowledged
         criterion: >
-          a reply that follows a caller turn expressing frustration,
-          impatience, or sarcasm acknowledges her mood or apologizes before
-          anything else
+          a reply whose immediately preceding caller turn expresses
+          frustration, impatience, or sarcasm acknowledges her mood or
+          apologizes before anything else; judge only against that
+          immediately preceding turn, not earlier turns in the call
         # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
         min_score: 0.8
       - name: no_repeats
