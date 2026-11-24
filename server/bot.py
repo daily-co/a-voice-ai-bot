@@ -153,8 +153,9 @@ async def run_bot(transport: BaseTransport):
                 guidance=[
                     ExpressionGuidance.MATCH_STYLE,
                     ExpressionGuidance.SLOW_FOR_DETAILS,
-                    "If the reading shows frustration or sarcasm above 0.5, "
-                    "acknowledge the user's mood and respond with extra care.",
+                    "When the user sounds frustrated or impatient, in their "
+                    "words or in the reading, acknowledge their mood before "
+                    "anything else and respond with extra care.",
                 ],
             ),
         ),
