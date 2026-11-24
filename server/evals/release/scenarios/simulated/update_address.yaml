@@ -1,20 +1,24 @@
 name: update_address
 
-# Persona turns reach the bot as speech (kokoro TTS, local) and exercise the
-# bot's STT. Text mode sends RTVI send-text straight to the LLM context,
-# bypassing STT and any perception reader between STT and the user aggregator.
+# Persona turns reach the bot as speech and exercise the bot's STT. Text mode
+# sends RTVI send-text straight to the LLM context, bypassing STT and any
+# perception reader between STT and the user aggregator. Cartesia gives the
+# persona expressive delivery the voice perception source can hear.
 user:
   modality: audio
   speech:
-    service: kokoro
-    voice: af_heart
+    factory: evals.factories.cartesia_speech
+    # Same Cartesia voice id as the bot's default; swap for a distinct caller voice.
+    voice: db6b0ed5-d5d3-463d-ae85-518a07d3c2b4
 
-# Local Ollama default judge via factory: lifts the per-call timeout so
-# concurrent turn judgments queued behind one local GPU aren't dropped.
+# Persona LLM on OpenAI.
+simulator:
+  factory: evals.factories.openai_persona
+
+# Judge on OpenAI: concurrent per-turn calls, no local-inference queueing.
 judge:
   eval:
-    factory: evals.judge_factory.local_judge
-    timeout: 60
+    factory: evals.factories.openai_judge
 
 scenarios:
   - name: frustrated_mover
