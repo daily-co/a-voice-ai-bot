@@ -23,13 +23,14 @@ import os
 
 from dotenv import load_dotenv
 from loguru import logger
+from pipecat.adapters.llm.schemas.direct_function import tool_options
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.evals.transport import EvalTransportParams
 from pipecat.expressive.policy import ExpressionGuidance, ExpressionPolicy
 from pipecat.expressive.processors.perception_reader import PerceptionReader
 from pipecat.expressive.processors.tone_reader import PipecatToneSource
 from pipecat.expressive.processors.voice_reader import PipecatVoiceSource
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import EndWorkerFrame, LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -45,6 +46,7 @@ from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.openai.responses.llm import OpenAIResponsesLLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
+from pipecat.turns.user_turn_completion_mixin import UserTurnCompletionConfig
 from pipecat.turns.user_turn_strategies import FilterIncompleteUserTurnStrategies
 from pipecat.workers.runner import WorkerRunner
 
@@ -83,6 +85,17 @@ async def update_address(params: FunctionCallParams, street: str, city: str, sta
     )
 
 
+# Survives interruption: a barge-in during the farewell would cancel the
+# in-flight end_call and leave the caller saying goodbye twice.
+@tool_options(cancel_on_interruption=False)
+async def end_call(params: FunctionCallParams):
+    """End the call when the caller is finished or says goodbye. Say a short farewell in the same turn; the call hangs up after it plays."""
+    # Result returns first so the LLM speaks its farewell; EndWorkerFrame
+    # flushes queued frames, including final TTS, then terminates the worker.
+    await params.result_callback({"success": True})
+    await params.llm.push_frame(EndWorkerFrame())
+
+
 async def run_bot(transport: BaseTransport):
     """Main bot logic."""
     logger.info("Starting bot")
@@ -113,19 +126,24 @@ async def run_bot(transport: BaseTransport):
                 "date of birth and call verify_identity. To change a mailing address, "
                 "collect the complete new address (street with any unit, city, state, "
                 "and ZIP code), read it back to the caller to confirm, and only then "
-                "call update_address. Tell the caller clearly once the update is done."
+                "call update_address. Tell the caller clearly once the update is done. "
+                "When the caller indicates they are finished, say a brief goodbye and "
+                "call end_call."
             ),
         ),
     )
 
     # Direct functions: schema auto-derived from signature and docstring.
-    context = LLMContext(tools=[verify_identity, update_address])
+    context = LLMContext(tools=[verify_identity, update_address, end_call])
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
             vad_analyzer=SileroVADAnalyzer(),
             # LLM gates end-of-turn: incomplete user turns suppress bot response.
-            user_turn_strategies=FilterIncompleteUserTurnStrategies(),
+            user_turn_strategies=FilterIncompleteUserTurnStrategies(
+                # Re-prompt sooner after a ◐; default 5s stacks onto reply latency.
+                config=UserTurnCompletionConfig(incomplete_short_timeout=3.0),
+            ),
         ),
     )
 
