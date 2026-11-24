@@ -8,10 +8,12 @@ Usage (from server/, with the bot already running on port 7860):
 """
 
 import argparse
+import queue
 import re
 import socket
 import subprocess
 import sys
+import threading
 import time
 from urllib.parse import urlsplit
 
@@ -39,10 +41,14 @@ def bot_reachable(bot_url: str) -> bool:
         return False
 
 
-def run_once(scenario_file: str, bot_url: str, verbose: bool) -> tuple[dict[str, bool], list[str]]:
-    """One `pipecat eval run`: {scenario: passed} and its failure bullet lines.
+def run_once(
+    scenario_file: str, bot_url: str, verbose: bool, stall_timeout: float
+) -> tuple[dict[str, bool], list[str], bool]:
+    """One `pipecat eval run`: {scenario: passed}, failure bullets, and whether it stalled.
 
-    With ``verbose``, streams the eval CLI's output live, indented.
+    With ``verbose``, streams the eval CLI's output live, indented. A run
+    producing no output for ``stall_timeout`` seconds is killed and flagged
+    stalled; killing the stuck client also frees a wedged local Ollama.
     """
     proc = subprocess.Popen(
         [sys.executable, "-m", "pipecat.evals", "run", scenario_file, "--bot-url", bot_url],
@@ -50,9 +56,26 @@ def run_once(scenario_file: str, bot_url: str, verbose: bool) -> tuple[dict[str,
         stderr=subprocess.STDOUT,
         text=True,
     )
-    lines: list[str] = []
     assert proc.stdout is not None
-    for raw in proc.stdout:
+    out: queue.Queue[str | None] = queue.Queue()
+
+    def _pump(stream=proc.stdout):
+        for raw in stream:
+            out.put(raw)
+        out.put(None)
+
+    threading.Thread(target=_pump, daemon=True).start()
+    lines: list[str] = []
+    stalled = False
+    while True:
+        try:
+            raw = out.get(timeout=stall_timeout)
+        except queue.Empty:
+            stalled = True
+            proc.kill()
+            break
+        if raw is None:
+            break
         line = ANSI.sub("", raw.rstrip("\n"))
         lines.append(line)
         if verbose and line.strip():
@@ -71,9 +94,11 @@ def run_once(scenario_file: str, bot_url: str, verbose: bool) -> tuple[dict[str,
             continue
         if line.startswith("•") and scenario:
             failures.append(f"{scenario}: {line.lstrip('• ').strip()}")
-    if not results:
+    if stalled:
+        failures.append(f"stalled: no output for {stall_timeout:.0f}s; killed the eval run")
+    elif not results:
         failures.append(f"no results parsed; last output: {text.strip().splitlines()[-1:]}")
-    return results, failures
+    return results, failures, stalled
 
 
 def main() -> int:
@@ -83,6 +108,12 @@ def main() -> int:
     parser.add_argument("--bot-url", default="ws://localhost:7860/ws")
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="stream each eval run's output live"
+    )
+    parser.add_argument(
+        "--stall-timeout",
+        type=float,
+        default=300,
+        help="kill a run after this many seconds without output (longest normal gap ~180s)",
     )
     args = parser.parse_args()
 
@@ -99,7 +130,16 @@ def main() -> int:
     for i in range(args.runs):
         print(f"run {i + 1}/{args.runs}: starting ...", flush=True)
         run_started = time.monotonic()
-        results, failures = run_once(args.scenario_file, args.bot_url, args.verbose)
+        results, failures, stalled = run_once(
+            args.scenario_file, args.bot_url, args.verbose, args.stall_timeout
+        )
+        if stalled and not results:
+            # Killing the stuck client frees Ollama; one retry per run.
+            print(f"run {i + 1}/{args.runs}: stalled; retrying once ...", flush=True)
+            results, retry_failures, stalled = run_once(
+                args.scenario_file, args.bot_url, args.verbose, args.stall_timeout
+            )
+            failures += retry_failures
         for name, passed in results.items():
             table.setdefault(name, []).append(passed)
         all_failures += [f"run {i + 1} {f}" for f in failures]
