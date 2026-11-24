@@ -5,7 +5,7 @@ A Pipecat AI voice agent built with a cascade pipeline (STT → LLM → TTS).
 ## Configuration
 
 - **Bot Type**: Web
-- **Transport(s)**: SmallWebRTC, Daily (WebRTC)
+- **Transport(s)**: SmallWebRTC, Daily (WebRTC), Eval
 - **Pipeline**: Cascade
   - **STT**: Deepgram
   - **LLM**: OpenAI Responses
@@ -54,22 +54,6 @@ exercising its STT path.
    cd server
    uv run python -m pipecat.evals run evals/release/scenarios/simulated/update_address.yaml
    ```
-
-## Project Structure
-
-```
-pipecat-quickstart/
-├── server/              # Python bot server
-│   ├── bot.py           # Main bot implementation
-│   ├── pyproject.toml   # Python dependencies
-│   ├── .env.example     # Environment variables template
-│   ├── .env             # Your API keys (git-ignored)
-│   ├── Dockerfile       # Container image for Pipecat Cloud
-│   └── pcc-deploy.toml  # Pipecat Cloud deployment config
-├── .gitignore           # Git ignore patterns
-└── README.md            # This file
-```
-
 ## Deploying to Pipecat Cloud
 
 This project is configured for deployment to Pipecat Cloud. You can learn how to deploy to Pipecat Cloud in the [Pipecat Quickstart Guide](https://docs.pipecat.ai/getting-started/quickstart#step-2-deploy-to-production).
