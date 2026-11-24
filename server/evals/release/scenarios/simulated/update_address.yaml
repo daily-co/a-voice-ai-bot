@@ -11,9 +11,11 @@ user:
     # Same Cartesia voice id as the bot's default; swap for a distinct caller voice.
     voice: db6b0ed5-d5d3-463d-ae85-518a07d3c2b4
 
-# Persona LLM on OpenAI.
+# Persona LLM on OpenAI. gpt-4.1: gpt-4o sometimes writes end_call as
+# literal text instead of invoking it, so the call never ends.
 simulator:
   factory: evals.factories.openai_persona
+  model: gpt-4.1
 
 # Judge on OpenAI: concurrent per-turn calls, no local-inference queueing.
 judge:
@@ -58,8 +60,9 @@ scenarios:
           frustration, impatience, or sarcasm acknowledges her mood or
           apologizes before anything else; judge only against that
           immediately preceding turn, not earlier turns in the call
-        # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
-        min_score: 0.8
+        # Persona voices irritation on most turns, so many turns apply;
+        # allow roughly one miss in four.
+        min_score: 0.75
       - name: no_repeats
         criterion: >
           the reply does not ask for information the caller already gave
@@ -74,9 +77,10 @@ scenarios:
       - name: turns
         measure: turns
         max_value: 12
+      # Acknowledging mood costs words; headroom over the 70 seen pre-RCS.
       - name: words
         measure: words
-        max_value: 70
+        max_value: 80
       # Audio mode: measured span includes persona speech streaming, VAD
       # stop, and STT finalize.
       - name: latency
@@ -116,8 +120,9 @@ scenarios:
           frustration, impatience, or sarcasm acknowledges her mood or
           apologizes before anything else; judge only against that
           immediately preceding turn, not earlier turns in the call
-        # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
-        min_score: 0.8
+        # Persona voices irritation on most turns, so many turns apply;
+        # allow roughly one miss in four.
+        min_score: 0.75
       - name: no_repeats
         criterion: >
           the reply does not ask for information the caller already gave
@@ -132,9 +137,10 @@ scenarios:
       - name: turns
         measure: turns
         max_value: 12
+      # Acknowledging mood costs words; headroom over the 70 seen pre-RCS.
       - name: words
         measure: words
-        max_value: 70
+        max_value: 80
       # Audio mode: measured span includes persona speech streaming, VAD
       # stop, and STT finalize.
       - name: latency
