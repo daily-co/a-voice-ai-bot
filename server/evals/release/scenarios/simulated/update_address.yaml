@@ -1,5 +1,14 @@
 name: update_address
 
+# Persona turns reach the bot as speech (kokoro TTS, local) and exercise the
+# bot's STT. Text mode sends RTVI send-text straight to the LLM context,
+# bypassing STT and any perception reader between STT and the user aggregator.
+user:
+  modality: audio
+  speech:
+    service: kokoro
+    voice: af_heart
+
 # Local Ollama default judge via factory: lifts the per-call timeout so
 # concurrent turn judgments queued behind one local GPU aren't dropped.
 judge:
@@ -60,9 +69,11 @@ scenarios:
       - name: words
         measure: words
         max_value: 70
+      # Audio mode: measured span includes persona speech streaming, VAD
+      # stop, and STT finalize.
       - name: latency
         measure: latency
-        max_value: 8
+        max_value: 15
     max_turns: 14
     runs: 3
 
@@ -114,8 +125,10 @@ scenarios:
       - name: words
         measure: words
         max_value: 70
+      # Audio mode: measured span includes persona speech streaming, VAD
+      # stop, and STT finalize.
       - name: latency
         measure: latency
-        max_value: 8
+        max_value: 15
     max_turns: 14
     runs: 3

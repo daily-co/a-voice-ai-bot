@@ -42,7 +42,9 @@ A Pipecat AI voice agent built with a cascade pipeline (STT → LLM → TTS).
 ## Evals
 
 Simulated-conversation evals live in `server/evals/release/scenarios/simulated/`.
-The persona and judge run on the local Ollama default model.
+The persona and judge run on the local Ollama default model. Persona turns are
+synthesized with kokoro (local) and stream to the bot as audio, exercising its
+STT path.
 
 1. Pull the judge model once: `ollama pull gemma4:12b` (and have `ollama serve` running).
 2. Start the bot (terminal 1): `cd server && uv run bot.py`
