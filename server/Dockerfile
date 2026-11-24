@@ -17,6 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Pre-download Pipecat Tone reader model so pipeline start skips Hugging Face.
 RUN /app/.venv/bin/python -c "from pipecat.classifiers.tone.model import PipecatToneReaderModel; PipecatToneReaderModel.download()"
+RUN /app/.venv/bin/python -c "from pipecat.classifiers.voice.model import PipecatVoiceReaderModel; PipecatVoiceReaderModel.download()"
 
 # Copy the application code
 COPY ./bot.py bot.py

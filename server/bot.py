@@ -26,7 +26,9 @@ from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.evals.transport import EvalTransportParams
 from pipecat.expressive.policy import ExpressionGuidance, ExpressionPolicy
-from pipecat.expressive.processors.tone_reader import PipecatToneReader
+from pipecat.expressive.processors.perception_reader import PerceptionReader
+from pipecat.expressive.processors.tone_reader import PipecatToneSource
+from pipecat.expressive.processors.voice_reader import PipecatVoiceSource
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -133,7 +135,8 @@ async def run_bot(transport: BaseTransport):
             transport.input(),
             stt,
             # Reads each user turn's emotion and sarcasm (RCS Perception).
-            PipecatToneReader(),
+            # Reads each turn's words (tone) and audio (voice) into its perception.
+            PerceptionReader(sources=[PipecatToneSource(), PipecatVoiceSource()]),
             user_aggregator,
             llm,
             tts,
