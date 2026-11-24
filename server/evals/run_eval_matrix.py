@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import time
+from urllib.parse import urlsplit
 
 DEFAULT_FILE = "evals/release/scenarios/simulated/update_address.yaml"
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
@@ -29,21 +30,22 @@ def git_branch() -> str:
         return "?"
 
 
-def bot_reachable(host: str = "localhost", port: int = 7860) -> bool:
+def bot_reachable(bot_url: str) -> bool:
+    parsed = urlsplit(bot_url)
     try:
-        with socket.create_connection((host, port), timeout=3):
+        with socket.create_connection((parsed.hostname, parsed.port or 7860), timeout=3):
             return True
     except OSError:
         return False
 
 
-def run_once(scenario_file: str, verbose: bool) -> tuple[dict[str, bool], list[str]]:
+def run_once(scenario_file: str, bot_url: str, verbose: bool) -> tuple[dict[str, bool], list[str]]:
     """One `pipecat eval run`: {scenario: passed} and its failure bullet lines.
 
     With ``verbose``, streams the eval CLI's output live, indented.
     """
     proc = subprocess.Popen(
-        [sys.executable, "-m", "pipecat.evals", "run", scenario_file],
+        [sys.executable, "-m", "pipecat.evals", "run", scenario_file, "--bot-url", bot_url],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -78,17 +80,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scenario_file", nargs="?", default=DEFAULT_FILE)
     parser.add_argument("--runs", type=int, default=3)
+    parser.add_argument("--bot-url", default="ws://localhost:7860/ws")
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="stream each eval run's output live"
     )
     args = parser.parse_args()
 
-    if not bot_reachable():
-        print("error: no bot on localhost:7860 - start it first: uv run bot.py")
+    if not bot_reachable(args.bot_url):
+        print(f"error: no bot at {args.bot_url} - start it first: uv run bot.py")
         return 2
 
     branch = git_branch()
-    print(f"branch: {branch} | file: {args.scenario_file} | runs: {args.runs}")
+    print(f"branch: {branch} | file: {args.scenario_file} | runs: {args.runs} | bot: {args.bot_url}")
 
     table: dict[str, list[bool]] = {}
     all_failures: list[str] = []
@@ -96,7 +99,7 @@ def main() -> int:
     for i in range(args.runs):
         print(f"run {i + 1}/{args.runs}: starting ...", flush=True)
         run_started = time.monotonic()
-        results, failures = run_once(args.scenario_file, args.verbose)
+        results, failures = run_once(args.scenario_file, args.bot_url, args.verbose)
         for name, passed in results.items():
             table.setdefault(name, []).append(passed)
         all_failures += [f"run {i + 1} {f}" for f in failures]

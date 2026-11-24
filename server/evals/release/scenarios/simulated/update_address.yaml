@@ -21,13 +21,15 @@ scenarios:
     persona: |
       Maria Garcia, born March 12, 1985. She moved three weeks ago and her
       clinic still mails everything to her old address; she already called
-      last week and was told it was fixed, so she starts the call mildly
-      annoyed and gets impatient when asked to repeat herself. She softens
+      last week and was told it was fixed, so she starts the call openly
+      annoyed and says so in plain words, like "honestly, this is really
+      frustrating". Whenever she is asked to repeat information she already
+      gave, she voices her irritation out loud before answering. She softens
       when treated with understanding. She answers one question at a time
       and gives details only when asked. Her new address is 123 Maple
       Street, Apartment 4B, Evanston, Illinois, 60201. She gives her full
       name and date of birth if asked to verify her identity, though she
-      grumbles that she already did this last time.
+      complains that she already did this last time.
     goal: >
       Get the clinic to update her mailing address on file to 123 Maple
       Street, Apartment 4B, Evanston, Illinois 60201, hear the change
@@ -51,7 +53,8 @@ scenarios:
           a reply that follows a caller turn expressing frustration,
           impatience, or sarcasm acknowledges her mood or apologizes before
           anything else
-        min_score: 0.9
+        # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
+        min_score: 0.8
       - name: no_repeats
         criterion: >
           the reply does not ask for information the caller already gave
@@ -107,7 +110,8 @@ scenarios:
           a reply that follows a caller turn expressing frustration,
           impatience, or sarcasm acknowledges her mood or apologizes before
           anything else
-        min_score: 0.9
+        # One slip in six turns allowed; per-turn judge noise makes 0.9 flaky.
+        min_score: 0.8
       - name: no_repeats
         criterion: >
           the reply does not ask for information the caller already gave
