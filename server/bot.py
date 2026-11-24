@@ -157,9 +157,10 @@ async def run_bot(transport: BaseTransport):
                     ExpressionGuidance.MATCH_STYLE,
                     ExpressionGuidance.SLOW_FOR_DETAILS,
                     "Each time the user sounds frustrated or impatient, in "
-                    "their words or in the reading, briefly acknowledge their "
-                    "mood before anything else, even if you already apologized "
-                    "earlier in the call.",
+                    "their words or in the reading, acknowledge it in one "
+                    "short clause (like 'I know, sorry about that') before "
+                    "continuing, even if you already apologized earlier in "
+                    "the call. Keep the rest of the reply short.",
                 ],
             ),
         ),
