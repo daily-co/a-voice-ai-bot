@@ -25,6 +25,10 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.evals.transport import EvalTransportParams
+from pipecat.expressive.policy import ExpressionGuidance, ExpressionPolicy
+from pipecat.expressive.processors.perception_reader import PerceptionReader
+from pipecat.expressive.processors.tone_reader import PipecatToneSource
+from pipecat.expressive.processors.voice_reader import PipecatVoiceSource
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -130,6 +134,9 @@ async def run_bot(transport: BaseTransport):
         [
             transport.input(),
             stt,
+            # Reads each user turn's emotion and sarcasm (RCS Perception).
+            # Reads each turn's words (tone) and audio (voice) into its perception.
+            PerceptionReader(sources=[PipecatToneSource(), PipecatVoiceSource()]),
             user_aggregator,
             llm,
             tts,
@@ -143,6 +150,19 @@ async def run_bot(transport: BaseTransport):
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
+            # RCS Expression: LLM writes delivery/sound tags the TTS performs.
+            enable_expressive_conversation=True,
+            expression_policy=ExpressionPolicy(
+                guidance=[
+                    ExpressionGuidance.MATCH_STYLE,
+                    ExpressionGuidance.SLOW_FOR_DETAILS,
+                    "Each time the user sounds frustrated or impatient, in "
+                    "their words or in the reading, acknowledge it in one "
+                    "short clause (like 'I know, sorry about that') before "
+                    "continuing, even if you already apologized earlier in "
+                    "the call. Keep the rest of the reply short.",
+                ],
+            ),
         ),
         observers=[],
     )
